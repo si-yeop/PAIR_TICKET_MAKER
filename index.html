@@ -1,0 +1,228 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>페어 티켓틀 생성기</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@1,500;1,600&family=Playfair+Display:ital,wght@0,500;0,700;0,900;1,500;1,600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="styles.css">
+  </head>
+  <body>
+    <main class="app-shell">
+      <section class="workspace" aria-label="티켓 미리보기">
+        <div class="brand-row">
+          <div>
+            <p class="eyebrow">PAIR TICKET MAKER</p>
+            <h1>페어 티켓틀 생성기</h1>
+          </div>
+          <button class="primary-action" id="downloadBtn" type="button">PNG 다운로드</button>
+        </div>
+
+        <div class="canvas-wrap">
+          <canvas id="ticketCanvas" width="1400" height="760" aria-label="편집 중인 티켓 캔버스"></canvas>
+        </div>
+        <p class="hint">사진 위에서 드래그하면 위치를 옮기고, 휠을 굴리면 빈 공간 없이 확대/축소됩니다.</p>
+      </section>
+
+      <aside class="control-panel" aria-label="편집 패널">
+        <section class="panel-section">
+          <div class="section-title">
+            <span>사진</span>
+            <strong id="activePhotoLabel">선택: 왼쪽 사진</strong>
+          </div>
+          <label class="upload-card">
+            <input id="photoLeft" type="file" accept="image/*">
+            <span>왼쪽 사진 업로드</span>
+          </label>
+          <label class="upload-card">
+            <input id="photoRight" type="file" accept="image/*">
+            <span>오른쪽 사진 업로드</span>
+          </label>
+          <div class="button-row" role="group" aria-label="사진 선택">
+            <button id="selectLeft" class="soft-button is-active" type="button">왼쪽 선택</button>
+            <button id="selectRight" class="soft-button" type="button">오른쪽 선택</button>
+          </div>
+          <div class="button-row">
+            <button id="resetLeftPhoto" class="ghost-button" type="button">왼쪽 사진 초기화</button>
+            <button id="resetRightPhoto" class="ghost-button" type="button">오른쪽 사진 초기화</button>
+          </div>
+          <button id="resetPhoto" class="ghost-button" type="button">선택 사진 위치 초기화</button>
+        </section>
+
+        <section class="panel-section">
+          <div class="section-title">
+            <span>스티커</span>
+          </div>
+          <label class="upload-card">
+            <input id="stickerUpload" type="file" accept="image/*">
+            <span>스티커 이미지 업로드</span>
+          </label>
+          <label>
+            선택 스티커 크기
+            <input id="stickerSize" type="range" min="70" max="320" value="170">
+          </label>
+          <button id="clearStickers" class="ghost-button" type="button">스티커 모두 지우기</button>
+        </section>
+
+        <section class="panel-section">
+          <div class="section-title">
+            <span>문구</span>
+          </div>
+          <label>
+            제목
+            <input id="titleText" type="text" maxlength="26" value="PAIR TICKET">
+          </label>
+          <label>
+            하단 문구
+            <input id="bottomText" type="text" maxlength="32" value="PAIR NAME">
+          </label>
+          <input id="sideText" type="hidden" value="">
+          <label>
+            왼쪽 번호
+            <input id="numberLeftText" type="text" maxlength="8" value="01">
+          </label>
+          <label>
+            오른쪽 번호
+            <input id="numberRightText" type="text" maxlength="8" value="02">
+          </label>
+          <label>
+            사진 글귀
+            <input id="photoCaptionText" type="text" maxlength="42" value="TEST">
+          </label>
+          <label>
+            사진 글귀 스타일
+            <select id="photoCaptionStyle">
+              <option value="script" selected>에디토리얼 이탤릭</option>
+              <option value="serif">클래식 세리프</option>
+              <option value="bold">굵은 산세리프</option>
+            </select>
+          </label>
+          <label>
+            사진 글귀 크기
+            <input id="photoCaptionSize" type="range" min="24" max="72" value="44">
+          </label>
+          <label>
+            사진 글귀 색상
+            <input id="photoCaptionColor" type="color" value="#ffffff">
+          </label>
+          <label>
+            작은 설명
+            <textarea id="noteText" maxlength="96" rows="3">MEMORY PASS</textarea>
+          </label>
+          <label>
+            날짜 / 코드
+            <input id="codeText" type="text" maxlength="24" value="NO. 0521">
+          </label>
+        </section>
+
+        <section class="panel-section">
+          <div class="section-title">
+            <span>배경</span>
+          </div>
+          <label>
+            배경 모드
+            <select id="backgroundMode">
+              <option value="grid" selected>그라데이션 격자</option>
+              <option value="image">배경 이미지</option>
+            </select>
+          </label>
+          <label>
+            배경 시작 색상
+            <input id="backgroundStartColor" type="color" value="#f6f3ed">
+          </label>
+          <label>
+            배경 끝 색상
+            <input id="backgroundEndColor" type="color" value="#bfc0bc">
+          </label>
+          <label>
+            배경 흐림
+            <input id="backgroundBlur" type="range" min="0" max="24" value="8">
+          </label>
+          <label class="upload-card">
+            <input id="backgroundImage" type="file" accept="image/*">
+            <span>배경 이미지 업로드</span>
+          </label>
+        </section>
+
+        <section class="panel-section">
+          <div class="section-title">
+            <span>오른쪽 스텁</span>
+          </div>
+          <label>
+            스텁 색상
+            <input id="bandColor" type="color" value="#303030">
+          </label>
+          <label class="upload-card">
+            <input id="stubImage" type="file" accept="image/*">
+            <span>스텁 이미지 업로드</span>
+          </label>
+          <label>
+            스텁 이미지 농도
+            <input id="stubImageOpacity" type="range" min="0" max="100" value="52">
+          </label>
+          <label class="upload-card">
+            <input id="barcodeImage" type="file" accept="image/*">
+            <span>바코드 영역 이미지 업로드</span>
+          </label>
+          <label>
+            바코드 크기
+            <input id="barcodeSize" type="range" min="50" max="420" value="160">
+          </label>
+        </section>
+
+        <section class="panel-section">
+          <div class="section-title">
+            <span>스타일</span>
+          </div>
+          <label>
+            장식 선 색상
+            <input id="accentColor" type="color" value="#222222">
+          </label>
+          <label>
+            티켓 글씨 색상
+            <input id="textColor" type="color" value="#171717">
+          </label>
+          <label>
+            티켓 바탕 색상
+            <input id="inkColor" type="color" value="#fff7ec">
+          </label>
+          <label>
+            제목 크기
+            <input id="titleSize" type="range" min="34" max="70" value="44">
+          </label>
+          <label>
+            본문 크기
+            <input id="bodySize" type="range" min="20" max="42" value="28">
+          </label>
+          <label>
+            종이 밝기
+            <input id="paperTone" type="range" min="0" max="100" value="86">
+          </label>
+        </section>
+
+        <section class="panel-section">
+          <div class="section-title">
+            <span>템플릿</span>
+          </div>
+          <label>
+            템플릿 이름
+            <input id="templateName" type="text" maxlength="32" value="MY TICKET TEMPLATE">
+          </label>
+          <button id="saveTemplate" class="primary-action" type="button">템플릿 저장</button>
+          <label>
+            저장된 템플릿
+            <select id="templateSelect"></select>
+          </label>
+          <div class="button-row">
+            <button id="loadTemplate" class="soft-button" type="button">불러오기</button>
+            <button id="deleteTemplate" class="ghost-button" type="button">삭제</button>
+          </div>
+        </section>
+      </aside>
+    </main>
+
+    <script src="app.js"></script>
+  </body>
+</html>
