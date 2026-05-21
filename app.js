@@ -4,6 +4,9 @@ const ctx = canvas.getContext("2d");
 const BASE_WIDTH = 1400;
 const BASE_HEIGHT = 760;
 const TEMPLATE_STORAGE_KEY = "pairTicketTemplates.v1";
+const TEMPLATE_DB_NAME = "pairTicketMaker";
+const TEMPLATE_DB_VERSION = 1;
+const TEMPLATE_STORE_NAME = "templates";
 const TICKET = { x: 64, y: 82, w: 1272, h: 596, r: 34, bite: 30, splitX: 1048 };
 const PHOTO_AREA = { x: 480, y: 132, w: 552, h: 500 };
 const STUB_PANEL = { x: 1088, y: 120, w: 206, h: 520 };
@@ -54,6 +57,7 @@ const controls = {
   bodySize: document.getElementById("bodySize"),
   paperTone: document.getElementById("paperTone"),
   templateName: document.getElementById("templateName"),
+  templateStatus: document.getElementById("templateStatus"),
   templateSelect: document.getElementById("templateSelect"),
   saveTemplate: document.getElementById("saveTemplate"),
   loadTemplate: document.getElementById("loadTemplate"),
@@ -1037,7 +1041,7 @@ function exportPng() {
   link.click();
 }
 
-function getTemplates() {
+function getTemplatesLegacy() {
   try {
     return JSON.parse(localStorage.getItem(TEMPLATE_STORAGE_KEY) || "{}");
   } catch {
@@ -1045,12 +1049,81 @@ function getTemplates() {
   }
 }
 
-function setTemplates(templates) {
+function setTemplatesLegacy(templates) {
   localStorage.setItem(TEMPLATE_STORAGE_KEY, JSON.stringify(templates));
 }
 
-function refreshTemplateSelect() {
-  const templates = getTemplates();
+let templateDbPromise = null;
+
+function openTemplateDatabase() {
+  if (!("indexedDB" in window)) return Promise.reject(new Error("IndexedDB is unavailable."));
+  if (templateDbPromise) return templateDbPromise;
+
+  templateDbPromise = new Promise((resolve, reject) => {
+    const request = indexedDB.open(TEMPLATE_DB_NAME, TEMPLATE_DB_VERSION);
+    request.onupgradeneeded = () => {
+      request.result.createObjectStore(TEMPLATE_STORE_NAME);
+    };
+    request.onsuccess = () => resolve(request.result);
+    request.onerror = () => reject(request.error || new Error("Could not open template storage."));
+  });
+
+  return templateDbPromise;
+}
+
+async function readTemplatesFromIndexedDb() {
+  const db = await openTemplateDatabase();
+  return new Promise((resolve, reject) => {
+    const request = db.transaction(TEMPLATE_STORE_NAME, "readonly")
+      .objectStore(TEMPLATE_STORE_NAME)
+      .get(TEMPLATE_STORAGE_KEY);
+    request.onsuccess = () => resolve(request.result || {});
+    request.onerror = () => reject(request.error || new Error("Could not read templates."));
+  });
+}
+
+async function writeTemplatesToIndexedDb(templates) {
+  const db = await openTemplateDatabase();
+  return new Promise((resolve, reject) => {
+    const request = db.transaction(TEMPLATE_STORE_NAME, "readwrite")
+      .objectStore(TEMPLATE_STORE_NAME)
+      .put(templates, TEMPLATE_STORAGE_KEY);
+    request.onsuccess = () => resolve();
+    request.onerror = () => reject(request.error || new Error("Could not save templates."));
+  });
+}
+
+async function getTemplates() {
+  try {
+    const templates = await readTemplatesFromIndexedDb();
+    if (Object.keys(templates).length > 0) return templates;
+  } catch {
+    return getTemplatesLegacy();
+  }
+
+  const localTemplates = getTemplatesLegacy();
+  if (Object.keys(localTemplates).length > 0) {
+    writeTemplatesToIndexedDb(localTemplates).catch(() => {});
+  }
+  return localTemplates;
+}
+
+async function setTemplates(templates) {
+  try {
+    await writeTemplatesToIndexedDb(templates);
+    return;
+  } catch {
+    setTemplatesLegacy(templates);
+  }
+}
+
+function showTemplateStatus(message) {
+  if (!controls.templateStatus) return;
+  controls.templateStatus.textContent = message;
+}
+
+async function refreshTemplateSelect() {
+  const templates = await getTemplates();
   const names = Object.keys(templates).sort((a, b) => a.localeCompare(b));
   controls.templateSelect.innerHTML = "";
 
@@ -1080,9 +1153,9 @@ function serializePhoto(side) {
   };
 }
 
-function saveTemplate() {
+async function saveTemplate() {
   const name = controls.templateName.value.trim() || "MY TICKET TEMPLATE";
-  const templates = getTemplates();
+  const templates = await getTemplates();
   templates[name] = {
     controls: {
       titleText: controls.titleText.value,
@@ -1125,9 +1198,15 @@ function saveTemplate() {
       right: serializePhoto("right"),
     },
   };
-  setTemplates(templates);
-  refreshTemplateSelect();
+  try {
+    await setTemplates(templates);
+  } catch (error) {
+    showTemplateStatus("이미지가 너무 커서 저장하지 못했습니다.");
+    return;
+  }
+  await refreshTemplateSelect();
   controls.templateSelect.value = name;
+  showTemplateStatus(`저장 완료: ${name}`);
 }
 
 function loadImageFromDataUrl(dataUrl) {
@@ -1181,7 +1260,7 @@ async function restoreStickers(savedStickers = []) {
 
 async function loadTemplate() {
   const name = controls.templateSelect.value;
-  const template = getTemplates()[name];
+  const template = (await getTemplates())[name];
   if (!template) return;
 
   Object.entries(template.controls || {}).forEach(([id, value]) => {
@@ -1201,15 +1280,17 @@ async function loadTemplate() {
   ]);
   setActivePhoto("left");
   render();
+  showTemplateStatus(`불러옴: ${name}`);
 }
 
-function deleteTemplate() {
+async function deleteTemplate() {
   const name = controls.templateSelect.value;
   if (!name) return;
-  const templates = getTemplates();
+  const templates = await getTemplates();
   delete templates[name];
-  setTemplates(templates);
-  refreshTemplateSelect();
+  await setTemplates(templates);
+  await refreshTemplateSelect();
+  showTemplateStatus("삭제했습니다.");
 }
 
 function resetPhotoSide(side) {

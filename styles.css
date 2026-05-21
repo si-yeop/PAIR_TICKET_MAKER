@@ -111,6 +111,14 @@ h1 {
   line-height: 1.6;
 }
 
+.mini-status {
+  min-height: 18px;
+  margin: -4px 0 0;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 800;
+}
+
 .control-panel {
   align-self: start;
   display: flex;
